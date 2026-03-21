@@ -1,6 +1,8 @@
 name: Build Tezuka Firmware
 
 on:
+  push:
+    branches: [ci-test]
   workflow_dispatch:
     inputs:
       version:
@@ -16,7 +18,7 @@ on:
 permissions:
   contents: write
 
-run-name: Build tezuka_fw - Tezuka_${{ inputs.version }}
+run-name: Build tezuka_fw - Tezuka_${{ inputs.version || 'ci-test' }}
 
 jobs:
   prepare:
@@ -26,6 +28,11 @@ jobs:
     steps:
       - id: set-matrix
         run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # On push: build only fishball to validate CI pipeline
+            echo 'matrix={"board":["fishball"]}' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           # Mini variants share toolchain/kernel -- skip in CI to save runner time.
           ALL='["pluto","plutoplus","e200","e310","libre","fishball","fishball7020","nano","signalsdrpro"]'
           INPUT="${{ inputs.boards }}"
@@ -94,7 +101,7 @@ jobs:
     needs: build
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-22.04
-    # Run smoke test for fishball builds (push trigger or if fishball is in matrix)
+    # Run smoke test if build succeeded (both push and dispatch triggers)
     if: always() && needs.build.result == 'success'
     steps:
       - uses: actions/download-artifact@v4
