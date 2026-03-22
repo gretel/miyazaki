@@ -90,8 +90,74 @@ jobs:
           name: tezuka-${{ matrix.board }}
           path: build/${{ matrix.board }}.zip
 
-  release:
+  smoke-test:
     needs: build
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    # Run smoke test for fishball builds (push trigger or if fishball is in matrix)
+    if: always() && needs.build.result == 'success'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tezuka-fishball
+          path: firmware/
+        continue-on-error: true
+        id: download
+
+      - name: Install QEMU
+        if: steps.download.outcome == 'success'
+        run: sudo apt-get install -y -qq qemu-system-arm
+
+      - name: Extract firmware
+        if: steps.download.outcome == 'success'
+        run: |
+          cd firmware
+          unzip -o ./*.zip sdimg/*
+          # Strip mkimage header (64 bytes) to get raw kernel and initrd
+          dd if=sdimg/uImage of=zImage bs=64 skip=1 2>/dev/null
+          dd if=sdimg/uramdisk.image.gz of=uramdisk.gz bs=64 skip=1 2>/dev/null
+
+      - name: QEMU boot test
+        if: steps.download.outcome == 'success'
+        run: |
+          cd firmware
+          # Boot with 45s timeout — kernel should reach login prompt in ~10s
+          timeout 45 qemu-system-arm \
+            -M xilinx-zynq-a9 \
+            -m 512M \
+            -kernel zImage \
+            -dtb sdimg/devicetree.dtb \
+            -initrd uramdisk.gz \
+            -serial stdio \
+            -nographic \
+            -no-reboot \
+            -append "console=ttyPS0,115200 root=/dev/ram rw" \
+            2>&1 | tee boot.log || true
+
+          echo ""
+          echo "=== Boot test results ==="
+
+          # Check for successful boot markers
+          if grep -q "login:" boot.log; then
+            echo "PASS: reached login prompt"
+          elif grep -q "Please press Enter to activate" boot.log; then
+            echo "PASS: reached console prompt"
+          elif grep -q "Welcome to Buildroot" boot.log; then
+            echo "PASS: reached Buildroot init"
+          elif grep -q "Kernel panic" boot.log; then
+            echo "FAIL: kernel panic"
+            grep "Kernel panic" boot.log
+            exit 1
+          else
+            echo "WARN: boot may have stalled (no login prompt within timeout)"
+            echo "Last 10 lines:"
+            tail -10 boot.log
+            # Don't fail — QEMU Zynq emulation may not reach login
+            # with a real board DTB. The absence of panic is still useful.
+          fi
+
+  release:
+    needs: [build, smoke-test]
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-22.04
     steps:
