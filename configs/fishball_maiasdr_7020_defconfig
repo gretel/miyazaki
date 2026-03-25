@@ -11,7 +11,7 @@ BR2_KERNEL_HEADERS_6_12=y
 #BR2_DEFAULT_KERNEL_HEADERS="6.1.108"
 BR2_OPTIMIZE_3=y
 BR2_ARM_FPU_NEON=y
-BR2_TARGET_OPTIMIZATION="-mcpu=cortex-a9 -mfpu=neon -ftree-vectorize -funsafe-math-optimizations"
+BR2_TARGET_OPTIMIZATION="-mfpu=neon -ftree-vectorize -funsafe-math-optimizations"
 BR2_SSP_STRONG=y
 BR2_RELRO_FULL=y
 BR2_FORTIFY_SOURCE_2=y
