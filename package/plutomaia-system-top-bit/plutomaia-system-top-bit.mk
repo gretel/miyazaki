@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-PLUTOMAIA_SYSTEM_TOP_BIT_VERSION = v0.7.0
+PLUTOMAIA_SYSTEM_TOP_BIT_VERSION = v0.8.2
 PLUTOMAIA_SYSTEM_TOP_BIT_SOURCE = plutosdr-jtag-bootstrap-maia-sdr-$(PLUTOMAIA_SYSTEM_TOP_BIT_VERSION).zip
 PLUTOMAIA_SYSTEM_TOP_BIT_SITE = https://github.com/maia-sdr/plutosdr-fw/releases/download/maia-sdr-$(PLUTOMAIA_SYSTEM_TOP_BIT_VERSION)
 
