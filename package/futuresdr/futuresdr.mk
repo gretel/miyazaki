@@ -3,8 +3,8 @@
 # FutureSDR
 #
 ################################################################################
-# Branch: main (pinned 2026-03-21)
-FUTURESDR_VERSION = 96562fe5042c465b1a3a95a11805e6d30c1a5aeb
+# Branch: main (pinned 2026-05-04)
+FUTURESDR_VERSION = 00cbb34799f9bfcdea94e628098a3dc9da302aad
 FUTURESDR_SITE = https://github.com/FutureSDR/FutureSDR/archive
 FUTURESDR_SOURCE = $(FUTURESDR_VERSION).tar.gz
 
