@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: ISC
+# prek configuration for tezuka_fw (Buildroot firmware).
+# Run with: prek run --all-files
+# Install hooks: prek install
+
+default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
+
+repos:
+  # Universal file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+        args: ['--maxkb=500']  # Firmware builds can have larger artifacts
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: check-symlinks
+      - id: destroyed-symlinks
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+
+  # Shell script linting (many shell scripts in board overlays, tools)
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.9.0
+    hooks:
+      - id: shellcheck
+        types: [shell]
+        args: ['--severity=warning']
+
+  # Credentials detection
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+      - id: forbid-new-submodules
+
+  # Shebang enforcement
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-shebang-scripts-are-executable
+      - id: check-executables-have-shebangs
+
+  # Python in package/ (Buildroot packages)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.1
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+        types: [python]
