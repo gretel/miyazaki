@@ -113,3 +113,15 @@ endef
 endif
 
 $(eval $(cmake-package))
+
+# libiio 1.0 moved headers to include/iio/ subdir. Create compat symlinks
+# so downstream packages using find_path(iio.h) or #include <iio.h> work.
+define LIBIIO_CREATE_COMPAT_SYMLINKS
+	ln -sf iio/iio.h $(STAGING_DIR)/usr/include/iio.h
+	ln -sf iio/iio-debug.h $(STAGING_DIR)/usr/include/iio-debug.h
+	ln -sf iio/iio-lock.h $(STAGING_DIR)/usr/include/iio-lock.h
+	ln -sf iio/iiod-client.h $(STAGING_DIR)/usr/include/iiod-client.h
+	ln -sf iio/iio-backend.h $(STAGING_DIR)/usr/include/iio-backend.h
+endef
+
+LIBIIO_POST_INSTALL_STAGING_HOOKS += LIBIIO_CREATE_COMPAT_SYMLINKS
