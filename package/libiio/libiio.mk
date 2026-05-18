@@ -103,7 +103,7 @@ endif
 
 ifeq ($(BR2_PACKAGE_LIBIIO_IIOD),y)
 define LIBIIO_INSTALL_INIT_SYSV
-	$(INSTALL) -D -m 0755 package/libiio/S60iiod \
+	$(INSTALL) -D -m 0755 $(BR2_EXTERNAL_PLUTOSDR_PATH)/package/libiio/S60iiod \
 		$(TARGET_DIR)/etc/init.d/S60iiod
 endef
 endif
