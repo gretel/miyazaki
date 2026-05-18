@@ -125,6 +125,21 @@ define LIBIIO_CREATE_COMPAT_SYMLINKS
 	ln -sf iio/iio-lock.h $(STAGING_DIR)/usr/include/iio-lock.h
 	ln -sf iio/iiod-client.h $(STAGING_DIR)/usr/include/iiod-client.h
 	ln -sf iio/iio-backend.h $(STAGING_DIR)/usr/include/iio-backend.h
+	# Both main and compat libs have OUTPUT_NAME=iio but different
+	# SOVERSIONs (1 vs 0). CMake's libiio.so symlink points to
+	# libiio.so.1 (new API) which lacks old symbols. Fix: make the
+	# linker symlink point to the compat library (libiio.so.0) which
+	# exports all old symbols and forwards to libiio.so.1 at runtime.
+	rm -f $(STAGING_DIR)/usr/lib/libiio.so
+	ln -sf libiio.so.0 $(STAGING_DIR)/usr/lib/libiio.so
 endef
 
 LIBIIO_POST_INSTALL_STAGING_HOOKS += LIBIIO_CREATE_COMPAT_SYMLINKS
+
+# Same fix for target — ensure libiio.so linker symlink points to compat.
+define LIBIIO_FIX_TARGET_LINKER_SYMLINK
+	rm -f $(TARGET_DIR)/usr/lib/libiio.so
+	ln -sf libiio.so.0 $(TARGET_DIR)/usr/lib/libiio.so
+endef
+
+LIBIIO_POST_INSTALL_TARGET_HOOKS += LIBIIO_FIX_TARGET_LINKER_SYMLINK
