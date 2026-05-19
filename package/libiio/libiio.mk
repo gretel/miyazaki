@@ -116,11 +116,8 @@ $(eval $(cmake-package))
 
 # libiio 1.0 moved headers to include/iio/ subdir. Create compat symlinks
 # so downstream packages using find_path(iio.h) or #include <iio.h> work.
-# iio.h uses the v0.26 compat header so old API callers (soapyplutosdr) compile
-# against the old declarations and link against libiio.so.0 (compat layer).
 define LIBIIO_CREATE_COMPAT_SYMLINKS
-	cp $(BR2_EXTERNAL_PLUTOSDR_PATH)/package/libiio/iio-compat.h \
-		$(STAGING_DIR)/usr/include/iio.h
+	ln -sf iio/iio.h $(STAGING_DIR)/usr/include/iio.h
 	ln -sf iio/iio-debug.h $(STAGING_DIR)/usr/include/iio-debug.h
 	ln -sf iio/iio-lock.h $(STAGING_DIR)/usr/include/iio-lock.h
 	ln -sf iio/iiod-client.h $(STAGING_DIR)/usr/include/iiod-client.h
