@@ -135,12 +135,6 @@ jobs:
         if: steps.br-cache.outputs.cache-hit != 'true'
         run: ./getbuildroot.sh
 
-      # Remove built-in libiio .mk — our BR2_EXTERNAL package/libiio
-      # provides a newer version. Buildroot's pkg-generic rejects two
-      # .mk files defining the same package name.
-      - name: Drop built-in libiio (external override)
-        run: rm -f buildroot/package/libiio/libiio.mk
-
       - name: Configure ${{ matrix.board }}
         run: |
           make -C buildroot O="${OUTPUT_DIR}" ${{ matrix.defconfig }}
