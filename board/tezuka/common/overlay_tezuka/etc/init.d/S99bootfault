@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# S99bootfault - Shutdown hook for boot fault tracking
+# BusyBox init calls this with 'stop' on shutdown.
+#
+
+start() {
+    :
+}
+
+stop() {
+    logger -t bootfault "clean shutdown"
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac

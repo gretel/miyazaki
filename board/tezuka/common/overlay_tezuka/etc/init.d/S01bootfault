@@ -1,0 +1,95 @@
+#!/bin/sh
+#
+# S01bootfault - Boot fault tracking init script
+# Reads reset cause from SLCR registers, manages fw_version env,
+# and mounts pstore for crash log preservation.
+#
+# Depends on: devmem (CONFIG_DEVMEM=y in BusyBox)
+#              fw_printenv/fw_setenv (CONFIG_ENV_IS_IN_SPI_FLASH)
+#              kernel CONFIG_PSTORE_RAM for /sys/fs/pstore
+#
+
+# shellcheck disable=SC2019,SC2018
+
+start() {
+    # --- 1. Read reset cause from Zynq SLCR registers ---
+    # PSS_RST_CTRL (0xF8000008): bit0=debug, bit1=soft, bit2=ext_warm, bit4=watchdog
+    # REBOOT_STATUS (0xF8000258): bit2=ext_cold, others=same as above
+    # These persist if U-Boot doesn't corrupt them (fixed in pl_init/clear_reset_cause).
+
+    REST_CTRL=$(devmem 0xF8000008 32)
+    RST_STATUS=$(devmem 0xF8000258 32)
+    RESET_CAUSE="power_on"
+    CLEAR=0
+
+    # PSS_RST_CTRL bits (higher priority first)
+    if [ $((REST_CTRL & 0x10)) -ne 0 ]; then
+        RESET_CAUSE="watchdog"
+        CLEAR=1
+    elif [ $((REST_CTRL & 0x04)) -ne 0 ]; then
+        RESET_CAUSE="external_warm"
+        CLEAR=1
+    elif [ $((REST_CTRL & 0x02)) -ne 0 ]; then
+        RESET_CAUSE="soft_reset"
+        CLEAR=1
+    elif [ $((REST_CTRL & 0x01)) -ne 0 ]; then
+        RESET_CAUSE="debug"
+        CLEAR=1
+    elif [ $((RST_STATUS & 0x04)) -ne 0 ]; then
+        RESET_CAUSE="external_cold"
+        CLEAR=1
+    fi
+
+    logger -t bootfault "reset_cause=${RESET_CAUSE} (pss_rst_ctrl=0x$(printf '%08x' $REST_CTRL) reboot_status=0x$(printf '%08x' $RST_STATUS))"
+
+    # Clear registers so next boot sees fresh values
+    if [ $CLEAR -eq 1 ]; then
+        # Unlock SLCR, clear, re-lock
+        devmem 0xF8000004 32 0xDF0D
+        devmem 0xF8000008 32 0
+        devmem 0xF8000258 32 0x00400000
+        devmem 0xF8000004 32 0x767B
+    fi
+
+    # --- 2. Version-gated env write ---
+    # Compare firmware version against fw_version env var.
+    # Only write to SPI flash when version changes (one write per update).
+
+    if [ -f /opt/VERSIONS ]; then
+        FW_VERSION=$(grep '^device-fw' /opt/VERSIONS | head -1 | tr -d ' \t')
+        if [ -n "$FW_VERSION" ] && command -v fw_printenv >/dev/null 2>&1; then
+            ENV_VERSION=$(fw_printenv fw_version 2>/dev/null | cut -d= -f2)
+            if [ "$FW_VERSION" != "$ENV_VERSION" ]; then
+                logger -t bootfault "fw_version changed: '${ENV_VERSION}' -> '${FW_VERSION}'"
+                fw_setenv fw_version "$FW_VERSION" 2>&1 | logger -t bootfault
+            fi
+        fi
+    fi
+
+    # --- 3. Mount pstore ---
+    if [ -d /sys/fs/pstore ]; then
+        mount -t pstore pstore /sys/fs/pstore 2>/dev/null && \
+            logger -t bootfault "pstore mounted"
+        # Log any preserved crash records
+        for f in /sys/fs/pstore/*; do
+            [ -f "$f" ] && logger -t bootfault "pstore record: $(basename $f) ($(wc -c < $f) bytes)"
+        done
+    fi
+}
+
+stop() {
+    logger -t bootfault "clean shutdown"
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac
